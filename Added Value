@@ -1,0 +1,86 @@
+#include <VirtualWire.h>
+#include <ServoTimer2.h>
+//Connect the Receiver data pin to Arduino pin 11
+
+#include <SoftwareSerial.h>
+// Attach the serial display's RX line to digital pin 2
+SoftwareSerial mySerial(3,2); // pin 2 = TX, pin 3 = RX
+
+int led = 4;
+
+byte message[VW_MAX_MESSAGE_LEN]; // a buffer to store the incoming messages
+byte messageLength = VW_MAX_MESSAGE_LEN; // the size of the message
+
+//======================================================//
+ServoTimer2 myservo;  // create servo object to control a servo
+// twelve servo objects can be created on most boards
+
+int pos = 0;    // variable to store the servo position
+//====================================================//
+void setup() {
+ mySerial.begin(9600); // set up serial port for 9600 baud
+ delay(500); // wait for display to boot up
+ 
+  mySerial.write(254); // cursor to beginning of first line
+  mySerial.write(128);
+
+  mySerial.write("                 "); // clear display + legends
+
+  mySerial.write(254);
+  mySerial.write(192);
+  mySerial.write("   <Locked>     ");
+  
+ //==============================
+ Serial.begin(9600);
+ Serial.println("Device is ready");
+ pinMode(led, OUTPUT);
+// Initialize the IO and ISR
+ vw_setup(2000); // Bits per sec
+ vw_rx_start(); // Start the receiver
+ //===================================================//
+ myservo.attach(9);  // attaches the servo on pin 9 to the servo object
+ //===============================================//
+
+}
+
+void loop() {
+  if (vw_get_message(message, &messageLength)) {  // Non-blocking
+    Serial.print("Received: ");
+    for (int i = 0; i < messageLength; i++) {
+     Serial.write(message[i]);
+    }
+   if((message[0]==111) && (message[1]==110) ) { // this is "on": "o" corresponds to 111, "n" corresponds to 110
+      digitalWrite(4, HIGH); // Led ON
+      //=======================================
+      mySerial.write(254); // move cursor to beginning of first line
+      mySerial.write(128);
+
+      mySerial.write("                "); // clear display
+      mySerial.write("                ");
+  
+      mySerial.write(254); // move cursor to beginning of first line
+      mySerial.write(129);
+ 
+      mySerial.write("Successful!!");
+     
+      mySerial.write(254); // move cursor to beginning of first line
+      mySerial.write(193);
+
+      mySerial.write("<Unlock>");
+     
+      delay(100);
+      //======================================
+      for (pos = 0; pos <= 90; pos += 1) { // goes from 0 degrees to 180 degrees
+      // in steps of 1 degree
+      myservo.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(100);                       // waits 15ms for the servo to reach the position
+      }
+   }
+   else {
+    digitalWrite(4, LOW); // Led OFF
+   }
+   Serial.println();
+  }
+  delay(50);
+
+}
